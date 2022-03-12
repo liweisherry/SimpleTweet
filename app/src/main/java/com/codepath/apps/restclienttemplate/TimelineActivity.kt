@@ -1,5 +1,6 @@
 package com.codepath.apps.restclienttemplate
 
+import android.content.ContentValues.TAG
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -7,9 +8,16 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.codepath.apps.restclienttemplate.models.Tweet
-import com.codepath.asynchttpclient.RequestParams
 import com.codepath.asynchttpclient.callback.JsonHttpResponseHandler
 import okhttp3.Headers
+import org.json.JSONException
+
+import com.codepath.asynchttpclient.callback.JsonHttpResponseHandler.JSON
+
+import org.json.JSONArray
+
+
+
 
 class TimelineActivity : AppCompatActivity() {
     lateinit var client: TwitterClient
@@ -17,6 +25,7 @@ class TimelineActivity : AppCompatActivity() {
     lateinit var adapter: TweetsAdapter
     lateinit var swipeContainer: SwipeRefreshLayout
     val tweets = ArrayList<Tweet>()
+    private lateinit var scrollListener: EndlessRecyclerViewScrollListener
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_timeline)
@@ -35,10 +44,51 @@ class TimelineActivity : AppCompatActivity() {
 
         rvTweets = findViewById(R.id.rvTweets)
         adapter = TweetsAdapter(tweets)
+        val linearLayoutManager = LinearLayoutManager(this)
 
-        rvTweets.layoutManager = LinearLayoutManager(this)
+        rvTweets.layoutManager = linearLayoutManager
         rvTweets.adapter = adapter
         populateHomeTimeline()
+
+        scrollListener =  object:EndlessRecyclerViewScrollListener(linearLayoutManager){
+            override fun onLoadMore(page: Int, totalItemsCount: Int, view: RecyclerView?) {
+                // Triggered only when new data needs to be appended to the list
+                // Add whatever code is needed to append new items to the bottom of the list
+                loadMoreData()
+            }
+        }
+        rvTweets.addOnScrollListener(scrollListener as EndlessRecyclerViewScrollListener);
+    }
+    fun loadMoreData() {
+        // 1. Send an API request to retrieve appropriate paginated data
+        // 2. Deserialize and construct new model objects from the API response
+        // 3. Append the new data objects to the existing set of items inside the array of items
+        // 4. Notify the adapter of the new items made with `notifyItemRangeInserted()`
+        client.getNextPageOfTweets(object : JsonHttpResponseHandler() {
+            override fun onSuccess(statusCode: Int, headers: Headers?, json: JSON) {
+                Log.i(TAG, "onSuccess getNextPageOfTweets: $json")
+                //  --> Deserialize and construct new model objects from the API response
+                val jsonArray = json.jsonArray
+                try {
+                    val tweets = Tweet.fromJsonArrary(jsonArray)
+                    //  --> Append the new data objects to the existing set of items inside the array of items
+                    //  --> Notify the adapter of the new items made with `notifyItemRangeInserted()`
+                    adapter.addAll(tweets)
+                } catch (e: JSONException) {
+                    e.printStackTrace()
+                }
+            }
+
+            override fun onFailure(
+                statusCode: Int,
+                headers: Headers?,
+                response: String?,
+                throwable: Throwable?
+            ) {
+                Log.e(TAG, "onFailure getNextPageOfTweets: ", throwable)
+            }
+        }, tweets[tweets.size - 1].max_id)
+        Log.i(TAG, "loadMoreData: " + tweets[tweets.size - 1].max_id)
     }
 
     fun populateHomeTimeline() {

@@ -64,6 +64,14 @@ class TwitterClient(context: Context) : OAuthBaseClient(
         client.get(apiUrl, params, handler)
     }
 
+    fun getNextPageOfTweets(handler: JsonHttpResponseHandler, maxId: Long) {
+        val apiUrl = getApiUrl("statuses/home_timeline.json")
+        val params = RequestParams()
+        params.put("count", "25")
+        params.put("since_id", maxId)
+        client.get(apiUrl, params, handler)
+    }
+
 
 
     /* 1. Define the endpoint URL with getApiUrl and pass a relative path to the endpoint
@@ -75,3 +83,4 @@ class TwitterClient(context: Context) : OAuthBaseClient(
 	 *    i.e client.post(apiUrl, params, handler)
 	 */
 }
+

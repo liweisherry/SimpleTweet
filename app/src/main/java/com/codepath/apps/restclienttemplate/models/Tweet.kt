@@ -7,6 +7,7 @@ class Tweet {
     var body: String =""
     var createdAt: String = ""
     var user: User? = null
+    var max_id: Long = 0
 
     companion object{
         fun fromJson(jsonObject: JSONObject): Tweet {
@@ -14,6 +15,7 @@ class Tweet {
             tweet.body = jsonObject.getString("text")
             tweet.createdAt = jsonObject.getString("created_at")
             tweet.user = User.fromJson(jsonObject.getJSONObject("user"))
+            tweet.max_id = jsonObject.getLong("id")
             return tweet
         }
 
@@ -24,5 +26,7 @@ class Tweet {
             }
             return tweets
         }
+
+
     }
 }
